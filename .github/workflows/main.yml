@@ -1,0 +1,50 @@
+require(cvTools)
+library(ggplot2)
+library(care)
+library(xgboost)
+
+
+xTest<-testset[,8:103, drop = FALSE]
+xTest<-as.matrix(xTest)
+
+x<-trainset[,8:103, drop=FALSE]
+x<-as.matrix(x)
+y<-subset(trainset, select = c("Age"))
+
+predicted<-matrix(0,dim(x)[1],1)
+
+kfoldmat<-matrix(NA,100,dim(x)[1])
+kfoldmat<-matrix(NA,100,dim(x)[1])
+
+predicted2<-matrix(0,dim(xTest)[1],1)
+
+kfoldmat2<-matrix(NA,100,dim(xTest)[1])
+kfoldmat2<-matrix(NA,100,dim(xTest)[1])
+
+for (i in seq(1:100)) { 
+  K = 10
+  foldVec<-cvFolds(dim(y)[1],K=K,R=1)
+  for (n in seq(1,K)){
+    # select 1/10th of data as test set
+    test_cv_x<- x[which(foldVec$which==n),]
+    # use the rest as training set
+    train_cv_x<- x[-which(foldVec$which==n),]
+    train_cv_y <- y[-which(foldVec$which==n),]
+    # train slm model on 90% of data
+    mdl <- xgboost(data = as.matrix(train_cv_x),
+                   label = as.matrix(train_cv_y),
+                   eta = 0.01, nround = 1400,
+                   gamma=1, max_depth=14,
+                   objective = "reg:linear", verbose = 2,booster="gbtree")
+    #ntreads=1 to reduce runningtime
+    # test on remainder
+    predicted[which(foldVec$which==n)]<-predict(mdl,as.matrix(test_cv_x))
+    #predicted[which(foldVec$which==n)]<-predict(mdl,as.matrix())
+    predicted2<-predict(mdl,as.matrix(xTest))
+  } 
+  kfoldmat[i,]<-predicted
+  kfoldmat[i,]<-predicted
+  kfoldmat2[i,]<-predicted2
+  kfoldmat2[i,]<-predicted2
+  
+}
